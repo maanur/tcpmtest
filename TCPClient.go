@@ -40,7 +40,6 @@ func promptVariables() (q int, w int, s int, a string) {
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println("Try again!")
-			r = true
 		} else {
 			fmt.Println("OK")
 			break
