@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"net"
@@ -10,16 +9,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maanur/escmailer/tui"
+
 	"golang.org/x/text/encoding/charmap"
 )
 
 func main() {
 	var wg sync.WaitGroup
-	var q = 3
-	var wait = 60  // in Seconds
-	var step = 100 // in Milliseconds
-	var addr = "192.168.51.122:6508"
-	q, wait, step, addr = promptVariables()
+	q, wait, step, addr := promptVariables()
 	for i := 0; i < q; i++ {
 		wg.Add(1)
 		go func() {
@@ -29,49 +26,46 @@ func main() {
 		time.Sleep(time.Duration(step) * time.Millisecond)
 	}
 	wg.Wait()
-	fmt.Println("Done")
+	fmt.Println("Завершено")
+	_ = tui.Prompt("Нажми Ентер чтоб закрыть", "")
+	os.Exit(0)
 }
 
 func promptVariables() (q int, w int, s int, a string) {
-	var r = false
 	var err error
 	for {
-		q, err = strconv.Atoi(prompt("Quantity? : 3", "3", r))
+		q, err = strconv.Atoi(tui.Prompt("Количество соединений : 3", "3"))
 		if err != nil {
 			fmt.Println(err)
-			fmt.Println("Try again!")
-		} else {
-			fmt.Println("OK")
-			break
-		}
-	}
-	for {
-		w, err = strconv.Atoi(prompt("Wait time? : 60", "60", r))
-		if err != nil {
-			fmt.Println(err)
-			fmt.Println("Try again!")
-			r = true
+			fmt.Println("Некорректный ввод, повтори")
 		} else {
 			break
 		}
 	}
 	for {
-		s, err = strconv.Atoi(prompt("Escalation step? : 100", "100", r))
+		w, err = strconv.Atoi(tui.Prompt("Время до отключения (сек) : 20", "20"))
 		if err != nil {
 			fmt.Println(err)
-			fmt.Println("Try again!")
-			r = true
+			fmt.Println("Некорректный ввод, повтори")
 		} else {
 			break
 		}
 	}
 	for {
-		a = prompt("Address:Port : 192.168.51.122:6508", "192.168.51.122:6508", r)
+		s, err = strconv.Atoi(tui.Prompt("Интервал между инициализацией соединений (мс) : 100", "100"))
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println("Некорректный ввод, повтори")
+		} else {
+			break
+		}
+	}
+	for {
+		a = tui.Prompt("Адрес TCPServer (в формате IP:port) : 192.168.51.122:6508", "192.168.51.122:6508")
 		_, err := net.ResolveTCPAddr("tcp", a)
 		if err != nil {
 			fmt.Println(err)
-			fmt.Println("Try again!")
-			r = true
+			fmt.Println("Некорректный адрес, повтори")
 		} else {
 			break
 		}
@@ -79,51 +73,30 @@ func promptVariables() (q int, w int, s int, a string) {
 	return
 }
 
-func prompt(ask string, dft string, repeat bool) (output string) {
-	consolereader := bufio.NewReader(os.Stdin)
-	fmt.Println(ask)
-	rn, err := consolereader.ReadBytes('\r') // this will prompt the user for input
-	if err != nil {
-		log.Fatal(err)
-	}
-	if !repeat {
-		output = string(rn[:len(rn)-1])
-	} else {
-		output = string(rn[1 : len(rn)-1])
-	}
-	if output == "" {
-		return dft
-	}
-	return output
-}
-
 func sampleRun(i int, wait int, addr string) {
 	server, err := net.ResolveTCPAddr("tcp", addr)
-	var delim []byte
-	delim = append(delim, 10)
 	if err != nil {
 		log.Fatal(err)
 	}
 	conn, err := openConn(server)
 	if err != nil {
-		fmt.Println("Sample " + strconv.Itoa(i+1) + " connection error:")
+		fmt.Println("Соединение " + strconv.Itoa(i+1) + " Ошибка соединения:")
 		log.Fatal(err)
 	}
-	sendMsg(str2cp866("Привет, TCPServer"), conn, i)
-	sendMsg(delim, conn, i)
+	sendMsg("Привет, TCPServer", conn, i)
 	JOB := getMsg(conn, i)
-	fmt.Println("Sample " + strconv.Itoa(i+1) + ": %JOB: " + JOB)
-	fmt.Println("Sample " + strconv.Itoa(i+1) + ": Waiting...")
+	fmt.Println("Соединение " + strconv.Itoa(i+1) + ": %JOB: " + JOB)
+	fmt.Println("Соединение " + strconv.Itoa(i+1) + ": Ждем " + strconv.Itoa(wait) + " сек...")
 	time.Sleep(time.Duration(wait) * time.Second)
-	fmt.Println("Sample " + strconv.Itoa(i+1) + ": ")
-	sendMsg(str2cp866(strconv.Itoa(180020+i*20)), conn, i)
+	fmt.Println("Соединение " + strconv.Itoa(i+1) + ": Посылаю код и отключаюсь")
+	sendMsg(strconv.Itoa(180020+i*20), conn, i)
 	closeConn(conn)
 }
 
 func openConn(addr *net.TCPAddr) (*net.TCPConn, error) {
 	conn, err := net.DialTCP("tcp4", nil, addr)
 	if err == nil {
-		fmt.Println("Connected...")
+		fmt.Println("Соединяемся...")
 	}
 	return conn, err
 }
@@ -133,9 +106,10 @@ func closeConn(conn *net.TCPConn) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Disonnected...")
+	fmt.Println("Отключился...")
 }
 
+//str2cp866 Конвертирует строку str в байт-код и перекодирует в cp866 и возвращает байт-код
 func str2cp866(str string) []byte {
 	input := []byte(str)
 	cp866 := charmap.CodePage866.NewEncoder()
@@ -146,6 +120,7 @@ func str2cp866(str string) []byte {
 	return output
 }
 
+//cp8662str Перекодирует input из cp866 и возвращает строку
 func cp8662str(input []byte) string {
 	cp866 := charmap.CodePage866.NewDecoder()
 	output, err := cp866.Bytes(input)
@@ -155,12 +130,12 @@ func cp8662str(input []byte) string {
 	return string(output)
 }
 
-func sendMsg(msg []byte, conn *net.TCPConn, i int) {
-	_, err := conn.Write(msg)
+func sendMsg(msg string, conn *net.TCPConn, i int) {
+	_, err := conn.Write(append(str2cp866(msg), 10))
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Sample " + strconv.Itoa(i+1) + ": send: " + string(msg))
+	fmt.Println("Соединение " + strconv.Itoa(i+1) + ": Отправили: " + string(msg))
 }
 
 func getMsg(conn *net.TCPConn, i int) string {
@@ -170,6 +145,6 @@ func getMsg(conn *net.TCPConn, i int) string {
 		log.Fatal(err)
 	}
 	output := cp8662str(input)
-	fmt.Println("Sample " + strconv.Itoa(i+1) + ": read: " + output)
+	fmt.Println("Соединение " + strconv.Itoa(i+1) + ": Получили: " + output)
 	return output
 }
