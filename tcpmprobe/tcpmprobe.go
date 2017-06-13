@@ -10,7 +10,7 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
-func SampleRun(i int, wait int, addr string) {
+func HelloRun(i int, wait int, addr string) {
 	server, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		log.Fatal(err)
@@ -20,16 +20,34 @@ func SampleRun(i int, wait int, addr string) {
 		println("Соединение " + strconv.Itoa(i+1) + " Ошибка соединения:")
 		log.Fatal(err)
 	}
-	sendMsg("Привет, TCPServer", conn, i)
+	defer closeConn(conn)
+	msg := "Привет, TCPServer"
+	err = sendMsg(msg, conn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	println("Соединение " + strconv.Itoa(i+1) + ": Отправили: " + string(msg))
 	JOB := getMsg(conn, i)
 	println("Соединение " + strconv.Itoa(i+1) + ": %JOB: " + JOB)
 	println("Соединение " + strconv.Itoa(i+1) + ": Ждем " + strconv.Itoa(wait) + " сек...")
 	time.Sleep(time.Duration(wait) * time.Second)
 	println("Соединение " + strconv.Itoa(i+1) + ": Посылаю код и отключаюсь")
-	sendMsg(strconv.Itoa(180020+i*20), conn, i)
-	closeConn(conn)
+	_ = sendMsg(strconv.Itoa(180020+i*20), conn)
 }
 
+func MonRun(addr string) {
+	server, err := net.ResolveTCPAddr("tcp", addr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	conn, err := openConn(server)
+	if err != nil {
+		println("Соединение " + strconv.Itoa(1) + " Ошибка соединения:")
+		log.Fatal(err)
+	}
+	defer closeConn(conn)
+	_ = sendMsg("Привет, TCPServer", conn)
+}
 func openConn(addr *net.TCPAddr) (*net.TCPConn, error) {
 	conn, err := net.DialTCP("tcp4", nil, addr)
 	if err == nil {
@@ -67,12 +85,10 @@ func cp8662str(input []byte) string {
 	return string(output)
 }
 
-func sendMsg(msg string, conn *net.TCPConn, i int) {
+func sendMsg(msg string, conn *net.TCPConn) error {
 	_, err := conn.Write(append(str2cp866(msg), 10))
-	if err != nil {
-		log.Fatal(err)
-	}
-	println("Соединение " + strconv.Itoa(i+1) + ": Отправили: " + string(msg))
+	return err
+
 }
 
 func getMsg(conn *net.TCPConn, i int) string {

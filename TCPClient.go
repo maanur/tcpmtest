@@ -24,7 +24,7 @@ func main() {
 	for i := 0; i < q; i++ {
 		wg.Add(1)
 		go func() {
-			tcpmprobe.SampleRun(i, wait, addr)
+			tcpmprobe.HelloRun(i, wait, addr)
 			defer wg.Done()
 		}()
 		time.Sleep(time.Duration(step) * time.Millisecond)
