@@ -1,7 +1,7 @@
 package tcpmprobe
 
 import (
-	"fmt"
+	"io"
 	"log"
 	"net"
 	"strconv"
@@ -10,14 +10,15 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
-func HelloRun(i int, wait int, addr string) {
+func HelloRun(i int, wait int, addr string, logger io.Writer) {
+	log.SetOutput(logger)
 	server, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		log.Fatal(err)
 	}
 	conn, err := openConn(server)
 	if err != nil {
-		println("Соединение " + strconv.Itoa(i+1) + " Ошибка соединения:")
+		log.Println("Соединение " + strconv.Itoa(i+1) + " Ошибка соединения:")
 		log.Fatal(err)
 	}
 	defer closeConn(conn)
@@ -26,12 +27,12 @@ func HelloRun(i int, wait int, addr string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	println("Соединение " + strconv.Itoa(i+1) + ": Отправили: " + string(msg))
+	log.Println("Соединение " + strconv.Itoa(i+1) + ": Отправили: " + string(msg))
 	JOB := getMsg(conn, i)
-	println("Соединение " + strconv.Itoa(i+1) + ": %JOB: " + JOB)
-	println("Соединение " + strconv.Itoa(i+1) + ": Ждем " + strconv.Itoa(wait) + " сек...")
+	log.Println("Соединение " + strconv.Itoa(i+1) + ": %JOB: " + JOB)
+	log.Println("Соединение " + strconv.Itoa(i+1) + ": Ждем " + strconv.Itoa(wait) + " сек...")
 	time.Sleep(time.Duration(wait) * time.Second)
-	println("Соединение " + strconv.Itoa(i+1) + ": Посылаю код и отключаюсь")
+	log.Println("Соединение " + strconv.Itoa(i+1) + ": Посылаю код и отключаюсь")
 	_ = sendMsg(strconv.Itoa(180020+i*20), conn)
 }
 
@@ -42,16 +43,16 @@ func MonRun(addr string) {
 	}
 	conn, err := openConn(server)
 	if err != nil {
-		println("Соединение " + strconv.Itoa(1) + " Ошибка соединения:")
+		log.Println("Соединение " + strconv.Itoa(1) + " Ошибка соединения:")
 		log.Fatal(err)
 	}
 	defer closeConn(conn)
-	_ = sendMsg("Привет, TCPServer", conn)
+	_ = sendMsg("Мониторинг", conn)
 }
 func openConn(addr *net.TCPAddr) (*net.TCPConn, error) {
 	conn, err := net.DialTCP("tcp4", nil, addr)
 	if err == nil {
-		println("Соединяемся...")
+		log.Println("Соединяемся...")
 	}
 	return conn, err
 }
@@ -61,7 +62,7 @@ func closeConn(conn *net.TCPConn) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	println("Отключился...")
+	log.Println("Отключился...")
 }
 
 //str2cp866 Конвертирует строку str в байт-код и перекодирует в cp866 и возвращает байт-код
@@ -98,11 +99,6 @@ func getMsg(conn *net.TCPConn, i int) string {
 		log.Fatal(err)
 	}
 	output := cp8662str(input)
-	println("Соединение " + strconv.Itoa(i+1) + ": Получили: " + output)
+	log.Println("Соединение " + strconv.Itoa(i+1) + ": Получили: " + output)
 	return output
-}
-
-func println(this string) {
-	fmt.Println(this)
-	log.Println(this)
 }

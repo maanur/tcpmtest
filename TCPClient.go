@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"io"
+
 	"github.com/maanur/escmailer/tui"
 	"github.com/maanur/testtcpmail/tcpmprobe"
 )
@@ -19,12 +21,11 @@ func main() {
 		log.Fatal(err)
 	}
 	defer logfile.Close()
-	log.SetOutput(logfile)
 	q, wait, step, addr := promptVariables()
 	for i := 0; i < q; i++ {
 		wg.Add(1)
 		go func() {
-			tcpmprobe.HelloRun(i, wait, addr)
+			tcpmprobe.HelloRun(i, wait, addr, io.MultiWriter(logfile, os.Stdout))
 			defer wg.Done()
 		}()
 		time.Sleep(time.Duration(step) * time.Millisecond)
