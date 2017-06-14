@@ -10,8 +10,8 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
-func HelloRun(i int, wait int, addr string, logger io.Writer) {
-	log.SetOutput(logger)
+func HelloRun(i int, wait int, addr string, output io.Writer) {
+	log.SetOutput(output)
 	server, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		log.Fatal(err)
@@ -36,19 +36,20 @@ func HelloRun(i int, wait int, addr string, logger io.Writer) {
 	_ = sendMsg(strconv.Itoa(180020+i*20), conn)
 }
 
-func MonRun(addr string) {
+func MonRun(addr string, output io.Writer) error {
 	server, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	conn, err := openConn(server)
 	if err != nil {
-		log.Println("Соединение " + strconv.Itoa(1) + " Ошибка соединения:")
-		log.Fatal(err)
+		return err
 	}
 	defer closeConn(conn)
-	_ = sendMsg("Мониторинг", conn)
+	err = sendMsg("Мониторинг", conn)
+	return err
 }
+
 func openConn(addr *net.TCPAddr) (*net.TCPConn, error) {
 	conn, err := net.DialTCP("tcp4", nil, addr)
 	if err == nil {
