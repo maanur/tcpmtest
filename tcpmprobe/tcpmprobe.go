@@ -36,17 +36,29 @@ func HelloRun(i int, wait int, addr string, output io.Writer) {
 	_ = sendMsg(strconv.Itoa(180020+i*20), conn)
 }
 
-func MonRun(addr string, output io.Writer) error {
+func MonRun(addr string, logger *log.Logger) error {
+	defer logger.Println("Мониторинг завершен")
 	server, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
+		logger.Println(addr + " : Адрес НЕ найден")
 		return err
 	}
+	logger.Println(addr + " : Адрес найден, IP " + server.IP.String())
+
 	conn, err := openConn(server)
+	defer closeConn(conn)
 	if err != nil {
+		logger.Println(addr + " : Соединение НЕ установлено")
 		return err
 	}
-	defer closeConn(conn)
+	logger.Println(addr + " : Соединение установлено")
+
 	err = sendMsg("Мониторинг", conn)
+	if err != nil {
+		logger.Println(addr + " : Сообщение НЕ доставлено")
+	} else {
+		logger.Println(addr + " : Сообщение доставлено")
+	}
 	return err
 }
 
