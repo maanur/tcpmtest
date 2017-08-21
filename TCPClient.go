@@ -18,8 +18,8 @@ import (
 
 var fq = flag.Int("q", 3, "Количество соединений")
 var intervalFlag interval
-var fwait = flag.Duration("w", time.Second*20, "Время поддержания соединения перед разрывом, с")
-var fstep = flag.Duration("s", time.Millisecond*100, "Интервал между соединениями, мс")
+var fwait = flag.Duration("w", time.Second*20, "Время поддержания соединения перед разрывом")
+var fstep = flag.Duration("s", time.Millisecond*100, "Интервал между соединениями")
 
 type interval time.Duration
 
@@ -72,7 +72,7 @@ func promptVariables() (q int, w time.Duration, s time.Duration, a string) {
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Println(err)
-			fmt.Println("Использование: testtcpmail addr:port")
+			fmt.Println("Использование: tcpmtest addr:port")
 			flag.PrintDefaults()
 			os.Exit(0)
 		}
