@@ -1,2 +1,2 @@
-# testtcpmail
-go get github.com/maanur/testtcpmail
+# tcpmtest
+go get github.com/maanur/tcpmtest
