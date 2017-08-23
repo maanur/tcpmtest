@@ -13,33 +13,20 @@ import (
 	"io"
 
 	"github.com/maanur/escmailer/tui"
-	"github.com/maanur/testtcpmail/tcpmprobe"
+	"github.com/maanur/tcpmtest/tcpmprobe"
 )
 
 var fq = flag.Int("q", 3, "Количество соединений")
-var intervalFlag interval
+var fccode = flag.Int("cc", 123456, "Код клиента, которым представляемся")
 var fwait = flag.Duration("w", time.Second*20, "Время поддержания соединения перед разрывом")
 var fstep = flag.Duration("s", time.Millisecond*100, "Интервал между соединениями")
+var fmon = flag.Bool("m", false, "Имитировать мониторинг (только проверка подключения, только одно соединение)")
 
-type interval time.Duration
-
-func (i *interval) String() string {
-	return fmt.Sprint(*i)
-}
-
-func (i *interval) Set(value string) error {
-	duration, err := time.ParseDuration(value)
-	if err != nil {
-		return err
-	}
-	*i = interval(duration)
-	return nil
-}
+const usagenote = "При обычном использовании в протоколе TCPMail на сервере отобразится попытка подключения от клиента 123456.\nПри запуске с флагом -m (мониторинг) на сервере отобразится 'Сервер. Мониторинг'"
 
 func main() {
-	q, wait, step, addr := promptVariables()
+	q, wait, step, addr, ccode := promptVariables()
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	var wg sync.WaitGroup
 	logfile, err := os.Create("testtcpmail_" + time.Now().Format("060102-150405") + ".log")
 	defer func() {
 		logger.Println("Лог записан в " + logfile.Name())
@@ -50,6 +37,15 @@ func main() {
 		logger.Fatal(err)
 	}
 	logger.SetOutput(io.MultiWriter(logfile, os.Stdout))
+	if fmon != nil && *fmon {
+		err = tcpmprobe.MonRun(addr, logger)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		return
+	}
+	var wg sync.WaitGroup
 	for i := 0; i < q; i++ {
 		wg.Add(1)
 		go func(i int, wr io.Writer) {
@@ -60,7 +56,7 @@ func main() {
 				}
 				wg.Done()
 			}()
-			tcpmprobe.HelloRun(wait, addr, log)
+			tcpmprobe.HelloRun(wait, addr, ccode, log)
 		}(i, io.MultiWriter(logfile, os.Stdout))
 		time.Sleep(step)
 	}
@@ -68,16 +64,29 @@ func main() {
 	log.Println("Завершено")
 }
 
-func promptVariables() (q int, w time.Duration, s time.Duration, a string) {
+func promptVariables() (q int, w time.Duration, s time.Duration, a string, cc int) {
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Println(err)
 			fmt.Println("Использование: tcpmtest addr:port")
 			flag.PrintDefaults()
+			fmt.Println(usagenote)
 			os.Exit(0)
 		}
 	}()
 	flag.Parse()
+	switch {
+	case len(flag.Args()) == 0:
+		panic("Не задан адрес сервера")
+	case len(flag.Args()) > 1:
+		panic("Слишком много аргументов")
+	default:
+		_, err := net.ResolveTCPAddr("tcp", flag.Arg(0))
+		if err != nil {
+			panic("Некорректный адрес сервера")
+		}
+		a = flag.Arg(0)
+	}
 	if fq != nil {
 		if *fq <= 0 {
 			panic("Некорректное кол-во соединений")
@@ -96,17 +105,14 @@ func promptVariables() (q int, w time.Duration, s time.Duration, a string) {
 	} else {
 		s = time.Millisecond * 100
 	}
-	switch {
-	case len(flag.Args()) == 0:
-		panic("Не задан адрес сервера")
-	case len(flag.Args()) > 1:
-		panic("Слишком много аргументов")
-	default:
-		_, err := net.ResolveTCPAddr("tcp", flag.Arg(0))
-		if err != nil {
-			panic("Некорректный адрес сервера")
+	if fccode != nil {
+		if *fccode <= 0 {
+			panic("Некорректный код клиента")
+		} else {
+			cc = *fccode
 		}
-		a = flag.Arg(0)
+	} else {
+		cc = 123456
 	}
 	/*
 		for {

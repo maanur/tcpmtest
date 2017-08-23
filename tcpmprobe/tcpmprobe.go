@@ -9,7 +9,7 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
-func HelloRun(wait time.Duration, addr string, log *log.Logger) {
+func HelloRun(wait time.Duration, addr string, ccode int, log *log.Logger) {
 	server, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		log.Panic(err)
@@ -31,7 +31,7 @@ func HelloRun(wait time.Duration, addr string, log *log.Logger) {
 	log.Println("Ждем " + wait.String() + " сек...")
 	time.Sleep(wait)
 	log.Println("Посылаю код и отключаюсь")
-	err = sendMsg(strconv.Itoa(123456), conn)
+	err = sendMsg(strconv.Itoa(ccode), conn)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -47,12 +47,12 @@ func MonRun(addr string, log *log.Logger) error {
 	log.Println(addr + " : Адрес найден, IP " + server.IP.String())
 
 	conn, err := openConn(server, log)
-	defer closeConn(conn, log)
 	if err != nil {
 		log.Println(addr + " : Соединение НЕ установлено")
 		return err
 	}
 	log.Println(addr + " : Соединение установлено")
+	defer closeConn(conn, log)
 
 	err = sendMsg("Мониторинг", conn)
 	if err != nil {
@@ -85,7 +85,7 @@ func str2cp866(str string) []byte {
 	cp866 := charmap.CodePage866.NewEncoder()
 	output, err := cp866.Bytes(input)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	return output
 }
@@ -95,7 +95,7 @@ func cp8662str(input []byte) string {
 	cp866 := charmap.CodePage866.NewDecoder()
 	output, err := cp866.Bytes(input)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	return string(output)
 }
@@ -110,7 +110,7 @@ func getMsg(conn *net.TCPConn, log *log.Logger) string {
 	input := make([]byte, 64)
 	_, err := conn.Read(input)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	output := cp8662str(input)
 	log.Println("Получили: " + output)
