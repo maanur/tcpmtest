@@ -20,9 +20,9 @@ var fq = flag.Int("q", 3, "Количество соединений")
 var fccode = flag.Int("cc", 123456, "Код клиента, которым представляемся")
 var fwait = flag.Duration("w", time.Second*20, "Время поддержания соединения перед разрывом")
 var fstep = flag.Duration("s", time.Millisecond*100, "Интервал между соединениями")
-var fmon = flag.Bool("m", false, "Имитировать мониторинг (только проверка подключения, только одно соединение)")
+var fmon = flag.Bool("M", false, "Имитировать мониторинг (только проверка подключения, только одно соединение)")
 
-const usagenote = "При обычном использовании в протоколе TCPMail на сервере отобразится попытка подключения от клиента 123456.\nПри запуске с флагом -m (мониторинг) на сервере отобразится 'Сервер. Мониторинг'"
+const usagenote = "При обычном использовании в протоколе TCPMail на сервере отобразится попытка подключения от клиента 123456.\nПри запуске с флагом -M (мониторинг) на сервере отобразится 'Сервер. Мониторинг'"
 
 func main() {
 	q, wait, step, addr, ccode := promptVariables()
@@ -67,7 +67,7 @@ func main() {
 func promptVariables() (q int, w time.Duration, s time.Duration, a string, cc int) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println(err)
+			fmt.Printf("Ошибка вызова: %v \n\n", err)
 			fmt.Println("Использование: tcpmtest addr:port")
 			flag.PrintDefaults()
 			fmt.Println(usagenote)
@@ -114,44 +114,5 @@ func promptVariables() (q int, w time.Duration, s time.Duration, a string, cc in
 	} else {
 		cc = 123456
 	}
-	/*
-		for {
-			q, err = strconv.Atoi(tui.Prompt("Количество соединений : 3", "3"))
-			if err != nil {
-				log.Println(err)
-				println("Некорректный ввод, повтори")
-			} else {
-				break
-			}
-		}
-		for {
-			w, err = strconv.Atoi(tui.Prompt("Время до отключения (сек) : 20", "20"))
-			if err != nil {
-				log.Println(err)
-				println("Некорректный ввод, повтори")
-			} else {
-				break
-			}
-		}
-		for {
-			s, err = strconv.Atoi(tui.Prompt("Интервал между инициализацией соединений (мс) : 100", "100"))
-			if err != nil {
-				log.Println(err)
-				println("Некорректный ввод, повтори")
-			} else {
-				break
-			}
-		}
-		for {
-			a = tui.Prompt("Адрес TCPServer (в формате IP:port) : 192.168.51.122:6508", "192.168.51.122:6508")
-			_, err := net.ResolveTCPAddr("tcp", a)
-			if err != nil {
-				log.Println(err)
-				println("Некорректный адрес, повтори")
-			} else {
-				break
-			}
-		}
-	*/
 	return
 }
