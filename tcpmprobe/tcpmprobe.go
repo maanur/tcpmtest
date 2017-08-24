@@ -9,6 +9,10 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
+// HelloRun поднимает соединение с TCPMail-сервером по адресу addr,
+//выполняет приветствие, получает в ответ PID серверного процесса,
+//затем выжидает wait, представляется как клиент ccode и отключается. Вывод передается в log.
+//При ошибке - паника.
 func HelloRun(wait time.Duration, addr string, ccode int, log *log.Logger) {
 	server, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
@@ -30,13 +34,16 @@ func HelloRun(wait time.Duration, addr string, ccode int, log *log.Logger) {
 	log.Println("%JOB: " + JOB)
 	log.Println("Ждем " + wait.String() + " сек...")
 	time.Sleep(wait)
-	log.Println("Посылаю код и отключаюсь")
+	log.Println("Посылаю код " + strconv.Itoa(ccode) + " и отключаюсь")
 	err = sendMsg(strconv.Itoa(ccode), conn)
 	if err != nil {
 		log.Panic(err)
 	}
 }
 
+// MonRun поднимает соединение с TCPMail-сервером по адресу addr,
+//выполняет приветсвие TCPMonitor'а и отключается. Вывод передается в log.
+//Возвращает встреченную ошибку, если ошибок нет - nil.
 func MonRun(addr string, log *log.Logger) error {
 	defer log.Println("Мониторинг завершен")
 	server, err := net.ResolveTCPAddr("tcp", addr)
